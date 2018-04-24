@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Correspondence concerning RMSynth_GPU should be addressed to: 
+Correspondence concerning RMSynth_GPU should be addressed to:
 sarrvesh.ss@gmail.com
 
 ******************************************************************************/
@@ -27,13 +27,16 @@ sarrvesh.ss@gmail.com
 extern "C"
 #endif
 
-int getFitsHeader(struct optionsList *inOptions, struct parList *params);
-int getFreqList(struct optionsList *inOptions, struct parList *params);
 void checkFitsError(int status);
-void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params);
-void checkInputFiles(struct optionsList *inOptions, struct parList *params);
-int getHDF5Header(struct optionsList *inOptions, struct parList *params);
-void makeOutputHDF5Images(struct optionsList *inOptions, struct parList *params);
+void checkInputFiles(struct optionsList *inOptions, struct IOFileDescriptors *descriptors);
+
+int getFitsHeader(struct optionsList *inOptions, struct fits_header_parameters *params, struct IOFileDescriptors *descriptors);
+int getHDF5Header(struct optionsList *inOptions, struct fits_header_parameters *header_parameters, struct parameters *params, struct IOFileDescriptors *descriptors);
+
+void makeOutputFitsImages(struct optionsList *inOptions, struct IOFileDescriptors *descriptors, struct fits_header_parameters *header_parameters, struct parameters *params);
+void makeOutputHDF5Images(struct optionsList *inOptions, struct IOFileDescriptors *descriptors, struct parameters *params, struct fits_header_parameters *header);
+
+int getFreqList(struct IOFileDescriptors *descriptors, struct parameters *params, struct DataArrays *data_array);
 
 /* Define the output file names here */
 #define DIRTY_P "dirtyP.fits"

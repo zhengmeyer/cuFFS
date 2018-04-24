@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Correspondence concerning RMSynth_GPU should be addressed to: 
+Correspondence concerning RMSynth_GPU should be addressed to:
 sarrvesh.ss@gmail.com
 
 ******************************************************************************/
@@ -42,7 +42,11 @@ int main(int argc, char *argv[]) {
     /* Host Variable declaration */
     char *parsetFileName = argv[1];
     struct optionsList inOptions;
-    struct parList params;
+    struct IOFileDescriptors descriptors;
+    struct parameters params;
+    struct fits_header_parameters header_parameters;
+    struct DataArrays data_array;
+
     int fitsStatus;
     int nDevices;
     int selectedDevice;
@@ -50,39 +54,43 @@ int main(int argc, char *argv[]) {
     struct deviceInfoList selectedDeviceInfo;
     struct timeInfoList t;
     unsigned int hours, mins, secs;
-    
+
     /* Initialize the clock variables */
     t.cpuTime = 0; t.msRead = 0;
     t.msWrite = 0; t.msProc = 0;
     t.msX = 0;
-    
+
     /* Start the clock */
     t.startTime = clock();
-    
+
     printf("\n");
     printf("RM Synthesis v%s\n", VERSION_STR);
     printf("Written by Sarrvesh S. Sridhar\n");
-    
+
     /* Verify command line input */
     if(argc!=NUM_INPUTS) {
         printf("ERROR: Invalid command line input. Terminating Execution!\n");
         printf("Usage: %s <parset filename>\n\n", argv[0]);
         return(FAILURE);
-    } 
+    }
     if(strcmp(parsetFileName, "-h") == 0) {
         /* Print help and exit */
         printf("Usage: %s <parset filename>\n\n", argv[0]);
         return(SUCCESS);
     }
-    
+
     /* Parse the input file */
     printf("INFO: Parsing input file %s\n", parsetFileName);
     inOptions = parseInput(parsetFileName);
-    
+
+    params.nPhi = inOptions.nPhi;
+    params.dPhi = inOptions.dPhi;
+    params.phiMin = inOptions.phiMin;
+
     /* Check input files */
     printf("INFO: Checking input files\n");
-    checkInputFiles(&inOptions, &params);
-    
+    checkInputFiles(&inOptions, &descriptors, &params);
+
     /* Retreive information about all connected GPU devices */
     /* Find the best device to use */
     gpuList = getDeviceInformation(&nDevices);
@@ -93,18 +101,23 @@ int main(int argc, char *argv[]) {
     /* Copy the device info for the best device */
     selectedDeviceInfo = copySelectedDeviceInfo(gpuList, selectedDevice);
     free(gpuList);
-    
+
     /* Gather information from input fits header and setup output images */
     t.startRead = clock();
     switch(inOptions.fileFormat) {
        case FITS:
-          fitsStatus = getFitsHeader(&inOptions, &params);
+
+          fitsStatus = getFitsHeader(&inOptions, &header_parameters, &descriptors);
+
           checkFitsError(fitsStatus);
-          makeOutputFitsImages(&inOptions, &params);
+
+          makeOutputFitsImages(&inOptions, &descriptors, &header_parameters, &params);
           break;
        case HDF5:
-          getHDF5Header(&inOptions, &params);
-          makeOutputHDF5Images(&inOptions, &params);
+
+          getHDF5Header(&inOptions, &header_parameters, &params, &descriptors);
+
+          makeOutputHDF5Images(&inOptions, &descriptors, &params, &header);
           break;
        default:
           // Control should never reach this point.
@@ -121,29 +134,29 @@ int main(int argc, char *argv[]) {
     printOptions(inOptions, params);
     t.stopWrite = clock();
     t.msWrite += ((unsigned int)(t.stopWrite - t.startWrite))/CLOCKS_PER_SEC;
-    
+
     /* Read frequency list */
     t.startRead = clock();
-    if(getFreqList(&inOptions, &params)) { return(FAILURE); }
+    if(getFreqList(&descriptors, &params, &data_arrays)) { return(FAILURE); }
     t.stopRead = clock();
     t.msRead += ((unsigned int)(t.stopRead - t.startRead))/CLOCKS_PER_SEC;
-    
+
     /* Find median lambda20 */
     t.startProc = clock();
-    getMedianLambda20(&params);
-    
+    getMedianLambda20(&data_arrays);
+
     /* Generate RMSF */
     printf("INFO: Computing RMSF\n");
-    if(generateRMSF(&inOptions, &params)) {
+    if(generateRMSF(&inOptions, &data_arrays,&params)) {
         printf("Error: Mem alloc failed while generating RMSF\n");
         return(FAILURE);
     }
     t.stopProc = clock();
     t.msProc += ((unsigned int)(t.stopProc - t.startProc))/CLOCKS_PER_SEC;
-    
+
     /* Write RMSF to disk */
     t.startWrite = clock();
-    if(writeRMSF(inOptions, params)) {
+    if(writeRMSF(inOptions, data_arrays)) {
         printf("Error: Unable to write RMSF to disk\n\n");
         return(FAILURE);
     }
@@ -159,19 +172,19 @@ int main(int argc, char *argv[]) {
     #endif
     t.stopWrite = clock();
     t.msWrite += ((unsigned int)(t.stopWrite - t.startWrite))/CLOCKS_PER_SEC;
-    
+
     /* Start RM Synthesis */
     printf("INFO: Starting RM Synthesis\n");
 
     doRMSynthesis(&inOptions, &params, selectedDeviceInfo, &t);
 
     /* Free up all allocated memory */
-    free(params.rmsf);
-    free(params.rmsfReal);
-    free(params.rmsfImag);
-    free(params.phiAxis);
-    free(params.freqList);
-    free(params.lambda2);
+    free(data_arrays.rmsf);
+    free(data_arrays.rmsfReal);
+    free(data_arrays.rmsfImag);
+    free(data_arrays.phiAxis);
+    free(data_arrays.freqList);
+    free(data_arrays.lambda2);
     free(inOptions.qCubeName);
     free(inOptions.uCubeName);
     free(inOptions.freqFileName);
@@ -180,16 +193,16 @@ int main(int argc, char *argv[]) {
     /* Close all open files */
     switch(inOptions.fileFormat) {
        case FITS:
-          fits_close_file(params.qFile, &fitsStatus);
-          fits_close_file(params.uFile, &fitsStatus);
-          fits_close_file(params.qDirty, &fitsStatus);
-          fits_close_file(params.uDirty, &fitsStatus);
-          fits_close_file(params.pDirty, &fitsStatus);
+          fits_close_file(descriptors.qFile, &fitsStatus);
+          fits_close_file(descriptors.uFile, &fitsStatus);
+          fits_close_file(descriptors.qDirty, &fitsStatus);
+          fits_close_file(descriptors.uDirty, &fitsStatus);
+          fits_close_file(descriptors.pDirty, &fitsStatus);
           checkFitsError(fitsStatus);
           break;
        case HDF5:
-          H5Fclose(params.qFileh5);
-          H5Fclose(params.uFileh5);
+          H5Fclose(descriptors.qFileh5);
+          H5Fclose(descriptors.uFileh5);
           break;
        default:
           // Control should never reach this point
@@ -197,7 +210,7 @@ int main(int argc, char *argv[]) {
           printf("ERROR: Contact Sarrvesh if you see this.");
           exit(FAILURE);
     }
-    
+
     /* Estimate the execution time */
     t.endTime = clock();
     t.cpuTime = (unsigned int)(t.endTime - t.startTime)/CLOCKS_PER_SEC;
