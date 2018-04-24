@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Correspondence concerning RMSynth_GPU should be addressed to: 
+Correspondence concerning RMSynth_GPU should be addressed to:
 sarrvesh.ss@gmail.com
 
 ******************************************************************************/
@@ -27,10 +27,10 @@ sarrvesh.ss@gmail.com
 extern "C"
 #endif
 
-int generateRMSF(struct optionsList *inOptions, struct parList *params);
+int generateRMSF(struct optionsList *inOptions, struct DataArrays *data_arrays, struct parameters *params);
 int compFunc(const void * a, const void * b);
-void getMedianLambda20(struct parList *params);
-int writeRMSF(struct optionsList inOptions, struct parList params);
+void getMedianLambda20(struct DataArrays *params);
+int writeRMSF(struct optionsList inOptions, struct DataArrays params);
 int plotRMSF(struct optionsList inOptions);
 
 #endif

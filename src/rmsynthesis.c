@@ -44,6 +44,9 @@ int main(int argc, char *argv[]) {
     struct optionsList inOptions;
     struct IOFileDescriptors descriptors;
     struct parameters params;
+    struct fits_header_parameters header_parameters;
+    struct DataArrays data_array;
+
     int fitsStatus;
     int nDevices;
     int selectedDevice;
@@ -80,6 +83,10 @@ int main(int argc, char *argv[]) {
     printf("INFO: Parsing input file %s\n", parsetFileName);
     inOptions = parseInput(parsetFileName);
 
+    params.nPhi = inOptions.nPhi;
+    params.dPhi = inOptions.dPhi;
+    params.phiMin = inOptions.phiMin;
+
     /* Check input files */
     printf("INFO: Checking input files\n");
     checkInputFiles(&inOptions, &descriptors, &params);
@@ -99,14 +106,18 @@ int main(int argc, char *argv[]) {
     t.startRead = clock();
     switch(inOptions.fileFormat) {
        case FITS:
-          fitsStatus = getFitsHeader(&inOptions, &params);
-          fitsStatus = getFitsHeader(&inOptions, &header, struct IOFileDescriptors *descriptors);
+
+          fitsStatus = getFitsHeader(&inOptions, &header_parameters, &descriptors);
+
           checkFitsError(fitsStatus);
-          makeOutputFitsImages(&inOptions, &params);
+
+          makeOutputFitsImages(&inOptions, &descriptors, &header_parameters, &params);
           break;
        case HDF5:
-          getHDF5Header(&inOptions, &params);
-          makeOutputHDF5Images(&inOptions, &params);
+
+          getHDF5Header(&inOptions, &header_parameters, &params, &descriptors);
+
+          makeOutputHDF5Images(&inOptions, &descriptors, &params, &header);
           break;
        default:
           // Control should never reach this point.
@@ -126,17 +137,17 @@ int main(int argc, char *argv[]) {
 
     /* Read frequency list */
     t.startRead = clock();
-    if(getFreqList(&inOptions, &params)) { return(FAILURE); }
+    if(getFreqList(&descriptors, &params, &data_arrays)) { return(FAILURE); }
     t.stopRead = clock();
     t.msRead += ((unsigned int)(t.stopRead - t.startRead))/CLOCKS_PER_SEC;
 
     /* Find median lambda20 */
     t.startProc = clock();
-    getMedianLambda20(&params);
+    getMedianLambda20(&data_arrays);
 
     /* Generate RMSF */
     printf("INFO: Computing RMSF\n");
-    if(generateRMSF(&inOptions, &params)) {
+    if(generateRMSF(&inOptions, &data_arrays,&params)) {
         printf("Error: Mem alloc failed while generating RMSF\n");
         return(FAILURE);
     }
@@ -145,7 +156,7 @@ int main(int argc, char *argv[]) {
 
     /* Write RMSF to disk */
     t.startWrite = clock();
-    if(writeRMSF(inOptions, params)) {
+    if(writeRMSF(inOptions, data_arrays)) {
         printf("Error: Unable to write RMSF to disk\n\n");
         return(FAILURE);
     }
@@ -168,12 +179,12 @@ int main(int argc, char *argv[]) {
     doRMSynthesis(&inOptions, &params, selectedDeviceInfo, &t);
 
     /* Free up all allocated memory */
-    free(params.rmsf);
-    free(params.rmsfReal);
-    free(params.rmsfImag);
-    free(params.phiAxis);
-    free(params.freqList);
-    free(params.lambda2);
+    free(data_arrays.rmsf);
+    free(data_arrays.rmsfReal);
+    free(data_arrays.rmsfImag);
+    free(data_arrays.phiAxis);
+    free(data_arrays.freqList);
+    free(data_arrays.lambda2);
     free(inOptions.qCubeName);
     free(inOptions.uCubeName);
     free(inOptions.freqFileName);
@@ -182,16 +193,16 @@ int main(int argc, char *argv[]) {
     /* Close all open files */
     switch(inOptions.fileFormat) {
        case FITS:
-          fits_close_file(params.qFile, &fitsStatus);
-          fits_close_file(params.uFile, &fitsStatus);
-          fits_close_file(params.qDirty, &fitsStatus);
-          fits_close_file(params.uDirty, &fitsStatus);
-          fits_close_file(params.pDirty, &fitsStatus);
+          fits_close_file(descriptors.qFile, &fitsStatus);
+          fits_close_file(descriptors.uFile, &fitsStatus);
+          fits_close_file(descriptors.qDirty, &fitsStatus);
+          fits_close_file(descriptors.uDirty, &fitsStatus);
+          fits_close_file(descriptors.pDirty, &fitsStatus);
           checkFitsError(fitsStatus);
           break;
        case HDF5:
-          H5Fclose(params.qFileh5);
-          H5Fclose(params.uFileh5);
+          H5Fclose(descriptors.qFileh5);
+          H5Fclose(descriptors.uFileh5);
           break;
        default:
           // Control should never reach this point

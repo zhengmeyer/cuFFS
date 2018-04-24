@@ -113,6 +113,9 @@ struct DataArrays {
     float *freqList;
     int nFreq;
     float *lambda2;
+    float *phiAxis;
+    int nPhi;
+    float *rmsf, *rmsfReal, *rmsfImag;
 }
 
 /* Structure to store useful GPU device information */

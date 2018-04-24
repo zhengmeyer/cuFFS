@@ -121,33 +121,19 @@ int copyStepToDevice(int deviceId, float *qImageArray, float *d_qImageArray floa
 }
 
 
-struct FileIODescriptors {
-    fitsfile *qFile, *uFile;
-    fitsfile *qDirty, *uDirty, *pDirty;
-
-    FILE *freq;
-
-    hid_t qFileh5, uFileh5;
-    hid_t qDirtyH5, uDirtyH5, pDirtyH5;
-
-    hid_t qDataspace, uDataspace;
-    hid_t qOutDataspace, uOutDataspace, pOutDataspace;
-    hid_t qDataset, uDataset;
-    hid_t qOutDataset, uOutDataset, pOutDataset;
-    hid_t qMemspace, uMemspace;
-    hid_t qOutMemspace, uOutMemspace, pOutMemspace;
-
-};
-
 /*************************************************************
 *
 * GPU accelerated RM Synthesis function
 *
 *************************************************************/
 extern "C"
-int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
-                  struct deviceInfoList selectedDeviceInfo,
-                  struct timeInfoList *t) {
+int doRMSynthesis(struct optionsList *inOptions,
+    struct IOFileDescriptors *descriptors,
+    struct parameters *params,
+    strcut DataArrays *arrays,
+    struct deviceInfoList selectedDeviceInfo,
+    struct timeInfoList *t) {
+
     int i, j;
 
     float *lambdaDiff2, *d_lambdaDiff2;
@@ -167,12 +153,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     dim3 calcThreadSize, calcBlockSize;
     long *fPixel;
     int fitsStatus = 0;
-    hid_t qDataspace, uDataspace;
-    hid_t qOutDataspace, uOutDataspace, pOutDataspace;
-    hid_t qDataset, uDataset;
-    hid_t qOutDataset, uOutDataset, pOutDataset;
-    hid_t qMemspace, uMemspace;
-    hid_t qOutMemspace, uOutMemspace, pOutMemspace;
+
     herr_t h5ErrorQ, h5ErrorU, h5ErrorP;
     herr_t qerror, uerror, perror;
     hsize_t offsetIn[N_DIMS], countIn[N_DIMS], dimIn;
@@ -194,35 +175,35 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        case HDF5:
           /* For HDF5, set up the hyperslab and data subset for input */
           dimIn = params->qAxisLen2 * params->qAxisLen3;
-          qDataset   = H5Dopen2(params->qFileh5, PRIMARYDATA, H5P_DEFAULT);
-          qDataspace = H5Dget_space(qDataset);
-          uDataset   = H5Dopen2(params->uFileh5, PRIMARYDATA, H5P_DEFAULT);
-          uDataspace = H5Dget_space(uDataset);
+          descriptors.qDataset   = H5Dopen2(descriptors->qFileh5, PRIMARYDATA, H5P_DEFAULT);
+          descriptors.qDataspace = H5Dget_space(qDataset);
+          descriptors.uDataset   = H5Dopen2(descriptors->uFileh5, PRIMARYDATA, H5P_DEFAULT);
+          descriptors.uDataspace = H5Dget_space(uDataset);
           countIn[0] = params->qAxisLen3;
           countIn[1] = 1; countIn[2] = params->qAxisLen2;
           offsetIn[0] = 0; offsetIn[1] = 0; offsetIn[2] = 0;
-          qMemspace = H5Screate_simple(1, &dimIn, NULL);
-          uMemspace = H5Screate_simple(1, &dimIn, NULL);
+          descriptors.qMemspace = H5Screate_simple(1, &dimIn, NULL);
+          descriptors.uMemspace = H5Screate_simple(1, &dimIn, NULL);
           if( qDataset<0 || uDataset<0 || qDataspace<0 || uDataspace<0 || qMemspace<0 || uMemspace<0 )
           { printf("\nError: HDF5 allocation failed\n"); }
 
           /* Set up the hyperslab and data subset for output */
           dimOut = params->qAxisLen2 * inOptions->nPhi;
-          qOutDataset   = H5Dopen2(params->qDirtyH5, PRIMARYDATA, H5P_DEFAULT);
-          qOutDataspace = H5Dget_space(qOutDataset);
-          uOutDataset   = H5Dopen2(params->uDirtyH5, PRIMARYDATA, H5P_DEFAULT);
-          uOutDataspace = H5Dget_space(uOutDataset);
-          pOutDataset   = H5Dopen2(params->pDirtyH5, PRIMARYDATA, H5P_DEFAULT);
-          pOutDataspace = H5Dget_space(uOutDataset);
+          descriptors.qOutDataset   = H5Dopen2(descriptors->qDirtyH5, PRIMARYDATA, H5P_DEFAULT);
+          descriptors.qOutDataspace = H5Dget_space(qOutDataset);
+          descriptors.uOutDataset   = H5Dopen2(descriptors->uDirtyH5, PRIMARYDATA, H5P_DEFAULT);
+          descriptors.uOutDataspace = H5Dget_space(uOutDataset);
+          descriptors.pOutDataset   = H5Dopen2(descriptors->pDirtyH5, PRIMARYDATA, H5P_DEFAULT);
+          descriptors.pOutDataspace = H5Dget_space(uOutDataset);
           countOut[0] = inOptions->nPhi;
-          countOut[1] = 1; countOut[2] = params->qAxisLen2;
+          countOut[1] = 1; countOut[2] = descriptors->qAxisLen2;
           offsetOut[0] = 0; offsetOut[1] = 0; offsetOut[2] = 0;
-          qOutMemspace = H5Screate_simple(1, &dimOut, NULL);
-          uOutMemspace = H5Screate_simple(1, &dimOut, NULL);
-          pOutMemspace = H5Screate_simple(1, &dimOut, NULL);
-          if( qOutDataset<0 || uOutDataset<0 || pOutDataset<0 ||
-              qOutDataspace<0 || uOutDataspace<0 || pOutDataspace<0 ||
-              qOutMemspace<0 || uOutMemspace<0 || pOutMemspace<0 ) {
+          descriptors.qOutMemspace = H5Screate_simple(1, &dimOut, NULL);
+          descriptors.uOutMemspace = H5Screate_simple(1, &dimOut, NULL);
+          descriptors.pOutMemspace = H5Screate_simple(1, &dimOut, NULL);
+          if( descriptors.qOutDataset<0 || descriptors.uOutDataset<0 || descriptors.pOutDataset<0 ||
+              descriptors.qOutDataspace<0 || descriptors.uOutDataspace<0 || descriptors.pOutDataspace<0 ||
+              descriptors.qOutMemspace<0 || descriptors.uOutMemspace<0 || descriptors.pOutMemspace<0 ) {
              printf("\nError: HDF5 output allocation failed\n");
              exit(FAILURE);
           }
@@ -260,7 +241,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 			nInElements, nOutElements, nRa, nPhi){){
 
     /* Compute \lambda^2 - \lambda^2_0 once. Common for all threads */
-	computeLambdaSquareDifference(lambdaDiff2, params->lambda2, params->lambda20, nFrequencies);
+	computeLambdaSquareDifference(lambdaDiff2, data_arrays->lambda2, data_arrays->lambda20, nFrequencies);
 
 
     t->stopProc = clock();
@@ -273,7 +254,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 
 
     /* Allocate and transfer phi axis info. Common for all threads */
-    copyPhiToDevice(selectedDeviceInfo.deviceID, params->phiAxis, d_phiAxis, nPhi);
+    copyPhiToDevice(selectedDeviceInfo.deviceID, data_arrays->phiAxis, d_phiAxis, nPhi);
 
     t->stopX = clock();
     t->msX += ((float)(t->stopX - t->startX))/CLOCKS_PER_SEC;
@@ -287,22 +268,22 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        switch(inOptions->fileFormat) {
           case FITS:
              fPixel[2] = j;
-             fits_read_pix(params->qFile, TFLOAT, fPixel, nInElements, NULL,
+             fits_read_pix(descriptors->qFile, TFLOAT, fPixel, nInElements, NULL,
                            qImageArray, NULL, &fitsStatus);
-             fits_read_pix(params->uFile, TFLOAT, fPixel, nInElements, NULL,
+             fits_read_pix(descriptors->uFile, TFLOAT, fPixel, nInElements, NULL,
                            uImageArray, NULL, &fitsStatus);
              checkFitsError(fitsStatus);
              break;
           case HDF5:
              offsetIn[1] = j-1;
-             qerror = H5Sselect_hyperslab(qDataspace, H5S_SELECT_SET, offsetIn,
+             qerror = H5Sselect_hyperslab(descriptors.qDataspace, H5S_SELECT_SET, offsetIn,
                                     NULL, countIn, NULL);
-             uerror = H5Sselect_hyperslab(uDataspace, H5S_SELECT_SET, offsetIn,
+             uerror = H5Sselect_hyperslab(descriptors.uDataspace, H5S_SELECT_SET, offsetIn,
                                     NULL, countIn, NULL);
-             h5ErrorQ = H5Dread(qDataset, H5T_NATIVE_FLOAT, qMemspace,
-                                   qDataspace, H5P_DEFAULT, qImageArray);
-             h5ErrorU = H5Dread(uDataset, H5T_NATIVE_FLOAT, uMemspace,
-                                   uDataspace, H5P_DEFAULT, uImageArray);
+             h5ErrorQ = H5Dread(descriptors.qDataset, H5T_NATIVE_FLOAT, qMemspace,
+                                   descriptors.qDataspace, H5P_DEFAULT, qImageArray);
+             h5ErrorU = H5Dread(descriptors.uDataset, H5T_NATIVE_FLOAT, uMemspace,
+                                   descriptors.uDataspace, H5P_DEFAULT, uImageArray);
              if(h5ErrorQ<0 || h5ErrorU<0 || qerror<0 || uerror<0 ) {
                 printf("\nError: Unable to read input data cubes\n\n");
                 exit(FAILURE);
@@ -325,7 +306,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        switch(inOptions->fileFormat) {
        case FITS:
           computeQUP_fits<<<calcBlockSize, calcThreadSize>>>(d_qImageArray,
-                   d_uImageArray, params->qAxisLen3, inOptions->nPhi,
+                   d_uImageArray, params->qAxisLen3, params->nPhi,
                    params->K, d_qPhi, d_uPhi, d_pPhi, d_phiAxis, d_lambdaDiff2);
           break;
        case HDF5:
@@ -350,25 +331,25 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        t->startWrite = clock();
        switch(inOptions->fileFormat) {
           case FITS:
-             fits_write_pix(params->qDirty, TFLOAT, fPixel, nOutElements, qPhi, &fitsStatus);
-             fits_write_pix(params->uDirty, TFLOAT, fPixel, nOutElements, uPhi, &fitsStatus);
-             fits_write_pix(params->pDirty, TFLOAT, fPixel, nOutElements, pPhi, &fitsStatus);
+             fits_write_pix(descriptors->qDirty, TFLOAT, fPixel, nOutElements, qPhi, &fitsStatus);
+             fits_write_pix(descriptors->uDirty, TFLOAT, fPixel, nOutElements, uPhi, &fitsStatus);
+             fits_write_pix(descriptors->pDirty, TFLOAT, fPixel, nOutElements, pPhi, &fitsStatus);
              checkFitsError(fitsStatus);
              break;
           case HDF5:
              offsetOut[1] = j-1;
-             qerror = H5Sselect_hyperslab(qOutDataspace, H5S_SELECT_SET,
+             qerror = H5Sselect_hyperslab(descriptors.qOutDataspace, H5S_SELECT_SET,
                                           offsetOut, NULL, countOut, NULL);
-             uerror = H5Sselect_hyperslab(uOutDataspace, H5S_SELECT_SET,
+             uerror = H5Sselect_hyperslab(descriptors.uOutDataspace, H5S_SELECT_SET,
                                           offsetOut, NULL, countOut, NULL);
-             perror = H5Sselect_hyperslab(pOutDataspace, H5S_SELECT_SET,
+             perror = H5Sselect_hyperslab(descriptors.pOutDataspace, H5S_SELECT_SET,
                                           offsetOut, NULL, countOut, NULL);
-             h5ErrorQ = H5Dwrite(qOutDataset, H5T_NATIVE_FLOAT, qOutMemspace,
-                                 qOutDataspace, H5P_DEFAULT, qPhi);
-             h5ErrorU = H5Dwrite(uOutDataset, H5T_NATIVE_FLOAT, uOutMemspace,
-                                 uOutDataspace, H5P_DEFAULT, uPhi);
-             h5ErrorP = H5Dwrite(pOutDataset, H5T_NATIVE_FLOAT, pOutMemspace,
-                                 pOutDataspace, H5P_DEFAULT, pPhi);
+             h5ErrorQ = H5Dwrite(descriptors.qOutDataset, H5T_NATIVE_FLOAT, descriptors.qOutMemspace,
+                                 descriptors.qOutDataspace, H5P_DEFAULT, qPhi);
+             h5ErrorU = H5Dwrite(descriptors.uOutDataset, H5T_NATIVE_FLOAT, descriptors.uOutMemspace,
+                                 descriptors.uOutDataspace, H5P_DEFAULT, uPhi);
+             h5ErrorP = H5Dwrite(descriptors.pOutDataset, H5T_NATIVE_FLOAT, descriptors.pOutMemspace,
+                                 descriptors.pOutDataspace, H5P_DEFAULT, pPhi);
              if(h5ErrorQ<0 || h5ErrorU || h5ErrorP<0 ||
                 qerror<0 || uerror<0 || perror<0 ) {
                 printf("\nError: Unable to write output data cubes\n\n");
@@ -392,17 +373,17 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        free(fPixel);
        break;
     case HDF5:
-       H5Sclose(qMemspace);  H5Sclose(uMemspace);
-       H5Sclose(qDataspace); H5Sclose(uDataspace);
-       H5Dclose(qDataset);   H5Dclose(uDataset);
-       H5Sclose(qOutMemspace);  H5Sclose(uOutMemspace);
-       H5Sclose(qOutDataspace); H5Sclose(uOutDataspace);
-       H5Dclose(qOutDataset);   H5Dclose(uOutDataset);
-       H5Sclose(pOutMemspace); H5Sclose(pOutDataspace);
-       H5Dclose(pOutDataset);
-       H5Fclose(params->qDirtyH5);
-       H5Fclose(params->uDirtyH5);
-       H5Fclose(params->pDirtyH5);
+       H5Sclose(descriptors.qMemspace);  H5Sclose(descriptors.uMemspace);
+       H5Sclose(descriptors.qDataspace); H5Sclose(descriptors.uDataspace);
+       H5Dclose(descriptors.qDataset);   H5Dclose(descriptors.uDataset);
+       H5Sclose(descriptors.qOutMemspace);  H5Sclose(descriptors.uOutMemspace);
+       H5Sclose(descriptors.qOutDataspace); H5Sclose(descriptors.uOutDataspace);
+       H5Dclose(descriptors.qOutDataset);   H5Dclose(descriptors.uOutDataset);
+       H5Sclose(descriptors.pOutMemspace); H5Sclose(descriptors.pOutDataspace);
+       H5Dclose(descriptors.pOutDataset);
+       H5Fclose(descriptors->qDirtyH5);
+       H5Fclose(descriptors->uDirtyH5);
+       H5Fclose(descriptors->pDirtyH5);
        break;
     }
 
