@@ -50,7 +50,7 @@ struct fits_header_parameters {
     float crpix1, crpix2, crpix3;
     float cdelt1, cdelt2, cdelt3;
     char ctype1[CTYPE_LEN], ctype2[CTYPE_LEN], ctype3[CTYPE_LEN];
-}
+};
 
 struct parameters {
     double phiMin, dPhi;
@@ -61,7 +61,7 @@ struct parameters {
     int uAxisLen1, uAxisLen2, uAxisLen3;
     float lambda20;
     float K;
-}
+};
 
 struct IOFileDescriptors {
     fitsfile *qFile, *uFile;
@@ -116,7 +116,7 @@ struct DataArrays {
     float *phiAxis;
     int nPhi;
     float *rmsf, *rmsfReal, *rmsfImag;
-}
+};
 
 /* Structure to store useful GPU device information */
 struct deviceInfoList {

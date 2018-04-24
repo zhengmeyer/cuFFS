@@ -53,9 +53,9 @@ int generateRMSF(struct optionsList *inOptions, struct DataArrays *data_arrays, 
         /* For each phi value, compute the corresponding RMSF */
         for(j=0; j<params->qAxisLen3; j++) {
             data_arrays->rmsfReal[i] += cos(2 * data_arrays->phiAxis[i] *
-                                   (data_arrays->lambda2[j] - data_arrays->lambda20 ));
+                                   (data_arrays->lambda2[j] - params->lambda20 ));
             data_arrays->rmsfImag[i] -= sin(2 * data_arrays->phiAxis[i] *
-                                   (data_arrays->lambda2[j] - data_arrays->lambda20 ));
+                                   (data_arrays->lambda2[j] - params->lambda20 ));
         }
         // Normalize with K
         data_arrays->rmsfReal[i] *= params->K;

@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Correspondence concerning RMSynth_GPU should be addressed to: 
+Correspondence concerning RMSynth_GPU should be addressed to:
 sarrvesh.ss@gmail.com
 
 ******************************************************************************/
@@ -28,6 +28,6 @@ extern "C"
 #endif
 
 struct optionsList parseInput(char *parsetFileName);
-void printOptions(struct optionsList inOptions, struct parList params);
+void printOptions(struct optionsList inOptions, struct parameters params);
 
 #endif
