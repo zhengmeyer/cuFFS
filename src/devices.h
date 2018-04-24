@@ -28,7 +28,11 @@ extern "C"
 #endif
 
 struct deviceInfoList * getDeviceInformation(int *nDevices);
-int doRMSynthesis(struct optionsList *inOptions, struct parameters *params,
+
+int doRMSynthesis(struct optionsList *inOptions,
+                  struct IOFileDescriptors *descriptors,
+                  struct parameters *params,
+                  struct DataArrays *data_arrays,
                   struct deviceInfoList selectedDeviceInfo,
                   struct timeInfoList *t);
 int getBestDevice(struct deviceInfoList *gpuList, int nDevices);
