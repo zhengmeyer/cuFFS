@@ -120,6 +120,25 @@ int copyStepToDevice(int deviceId, float *qImageArray, float *d_qImageArray floa
 	cudaSetDevice(currentCudaDevice);
 }
 
+
+struct FileIODescriptors {
+    fitsfile *qFile, *uFile;
+    fitsfile *qDirty, *uDirty, *pDirty;
+
+    FILE *freq;
+
+    hid_t qFileh5, uFileh5;
+    hid_t qDirtyH5, uDirtyH5, pDirtyH5;
+
+    hid_t qDataspace, uDataspace;
+    hid_t qOutDataspace, uOutDataspace, pOutDataspace;
+    hid_t qDataset, uDataset;
+    hid_t qOutDataset, uOutDataset, pOutDataset;
+    hid_t qMemspace, uMemspace;
+    hid_t qOutMemspace, uOutMemspace, pOutMemspace;
+
+};
+
 /*************************************************************
 *
 * GPU accelerated RM Synthesis function
@@ -193,7 +212,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
           qOutDataspace = H5Dget_space(qOutDataset);
           uOutDataset   = H5Dopen2(params->uDirtyH5, PRIMARYDATA, H5P_DEFAULT);
           uOutDataspace = H5Dget_space(uOutDataset);
-          pOutDataset   = H5Dopen2(params->uDirtyH5, PRIMARYDATA, H5P_DEFAULT);
+          pOutDataset   = H5Dopen2(params->pDirtyH5, PRIMARYDATA, H5P_DEFAULT);
           pOutDataspace = H5Dget_space(uOutDataset);
           countOut[0] = inOptions->nPhi;
           countOut[1] = 1; countOut[2] = params->qAxisLen2;
@@ -295,12 +314,6 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 
        /* Transfer input images to device */
        t->startX = clock();
-       cudaMemcpy(d_qImageArray, qImageArray,
-                  nInElements*sizeof(*qImageArray),
-                  cudaMemcpyHostToDevice);
-       cudaMemcpy(d_uImageArray, uImageArray,
-                  nInElements*sizeof(*qImageArray),
-                  cudaMemcpyHostToDevice);
 
        copyStepToDevice(selectedDeviceInfo.deviceID, qImageArray, d_qImageArray uImageArray, d_uImageArray, nInElements);
 
