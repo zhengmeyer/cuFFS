@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Correspondence concerning RMSynth_GPU should be addressed to: 
+Correspondence concerning RMSynth_GPU should be addressed to:
 sarrvesh.ss@gmail.com
 
 ******************************************************************************/
@@ -40,18 +40,18 @@ struct optionsList parseInput(char *parsetFileName) {
     struct optionsList inOptions;
     const char *str;
     char *tempStr;
-    
+
     /* Initialize configuration */
     config_init(&cfg);
-    
+
     /* Read in the configuration file */
     if(!config_read_file(&cfg, parsetFileName)) {
-        printf("Error: Error reading parset file. %s\n\n", 
+        printf("Error: Error reading parset file. %s\n\n",
                config_error_text(&cfg));
         config_destroy(&cfg);
         exit(FAILURE);
     }
-    
+
     /* Get the input file format */
     if(config_lookup_string(&cfg, "fileFormat", &str)) {
         tempStr = malloc(strlen(str)+1);
@@ -73,7 +73,7 @@ struct optionsList parseInput(char *parsetFileName) {
     }
     else { inOptions.fileFormat = FITS; }
     free(tempStr);
-    
+
     /* Get the names of fits files */
     if(config_lookup_string(&cfg, "qCubeName", &str)) {
         inOptions.qCubeName = malloc(strlen(str)+1);
@@ -93,7 +93,7 @@ struct optionsList parseInput(char *parsetFileName) {
         config_destroy(&cfg);
         exit(FAILURE);
     }
-    
+
     /* Get the name of the frequency file */
     if(config_lookup_string(&cfg, "freqFileName", &str)) {
         inOptions.freqFileName = malloc(strlen(str)+1);
@@ -111,12 +111,12 @@ struct optionsList parseInput(char *parsetFileName) {
         strcpy(inOptions.outPrefix, str);
     }
     else {
-        printf("INFO: 'outPrefix' is not defined. Defaulting to %s\n\n", 
+        printf("INFO: 'outPrefix' is not defined. Defaulting to %s\n\n",
                 DEFAULT_OUT_PREFIX);
         inOptions.outPrefix = malloc(strlen(DEFAULT_OUT_PREFIX)+1);
         strcpy(inOptions.outPrefix, DEFAULT_OUT_PREFIX);
     }
-    
+
     /* Get Faraday depth */
     if(! config_lookup_float(&cfg, "phiMin", &inOptions.phiMin)) {
         printf("Error: 'phiMin' undefined in parset\n\n");
@@ -152,7 +152,7 @@ struct optionsList parseInput(char *parsetFileName) {
         printf("INFO: 'nGPU' undefined in parset. Will use 1 device.\n");
         inOptions.nGPU = 1;
     }
-    
+
     config_destroy(&cfg);
     return(inOptions);
 }
@@ -162,24 +162,24 @@ struct optionsList parseInput(char *parsetFileName) {
 * Print parsed input to screen
 *
 *************************************************************/
-void printOptions(struct optionsList inOptions, struct parList params) {
+void printOptions(struct optionsList inOptions, struct parameters params) {
     int i;
-    
+
     printf("\n");
     for(i=0; i<SCREEN_WIDTH; i++) { printf("#"); }
     printf("\n");
     printf("Q Cube: %s\n", inOptions.qCubeName);
     printf("U Cube: %s\n", inOptions.uCubeName);
     printf("phi min: %.2f\n", inOptions.phiMin);
-    printf("# of phi planes: %d\n", inOptions.nPhi);
-    printf("delta phi: %.2lf\n", inOptions.dPhi);
+    printf("# of phi planes: %d\n", params.nPhi);
+    printf("delta phi: %.2lf\n", params.dPhi);
     printf("\n");
     printf("Input dimension: %d x %d x %d\n", params.qAxisLen1,
                                               params.qAxisLen2,
                                               params.qAxisLen3);
     printf("Output dimension: %d x %d x %d\n", params.qAxisLen1,
                                                params.qAxisLen2,
-                                               inOptions.nPhi);
+                                               params.nPhi);
     for(i=0; i<SCREEN_WIDTH; i++) { printf("#"); }
     printf("\n");
 }
