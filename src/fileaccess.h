@@ -30,7 +30,7 @@ extern "C"
 void checkFitsError(int status);
 void checkInputFiles(struct optionsList *inOptions, struct IOFileDescriptors *descriptors);
 
-int getFitsHeader(struct optionsList *inOptions, struct fits_header_parameters *params, struct IOFileDescriptors *descriptors);
+int getFitsHeader(struct optionsList *inOptions, struct parameters *params, struct fits_header_parameters *header, struct IOFileDescriptors *descriptors);
 int getHDF5Header(struct optionsList *inOptions, struct fits_header_parameters *header_parameters, struct parameters *params, struct IOFileDescriptors *descriptors);
 
 void makeOutputFitsImages(struct optionsList *inOptions, struct IOFileDescriptors *descriptors, struct fits_header_parameters *header_parameters, struct parameters *params);

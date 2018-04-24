@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     struct IOFileDescriptors descriptors;
     struct parameters params;
     struct fits_header_parameters header_parameters;
-    struct DataArrays data_array;
+    struct DataArrays data_arrays;
 
     int fitsStatus;
     int nDevices;
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
 
     /* Check input files */
     printf("INFO: Checking input files\n");
-    checkInputFiles(&inOptions, &descriptors, &params);
+    checkInputFiles(&inOptions, &descriptors);
 
     /* Retreive information about all connected GPU devices */
     /* Find the best device to use */
@@ -106,8 +106,7 @@ int main(int argc, char *argv[]) {
     t.startRead = clock();
     switch(inOptions.fileFormat) {
        case FITS:
-
-          fitsStatus = getFitsHeader(&inOptions, &header_parameters, &descriptors);
+          fitsStatus = getFitsHeader(&inOptions, &params, &header_parameters, &descriptors);
 
           checkFitsError(fitsStatus);
 
@@ -117,7 +116,7 @@ int main(int argc, char *argv[]) {
 
           getHDF5Header(&inOptions, &header_parameters, &params, &descriptors);
 
-          makeOutputHDF5Images(&inOptions, &descriptors, &params, &header);
+          makeOutputHDF5Images(&inOptions, &descriptors, &params, &header_parameters);
           break;
        default:
           // Control should never reach this point.
@@ -143,7 +142,7 @@ int main(int argc, char *argv[]) {
 
     /* Find median lambda20 */
     t.startProc = clock();
-    getMedianLambda20(&data_arrays);
+    getMedianLambda20(&params, &data_arrays);
 
     /* Generate RMSF */
     printf("INFO: Computing RMSF\n");

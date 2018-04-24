@@ -1,4 +1,4 @@
-params/******************************************************************************
+/******************************************************************************
 fileaccess.c
 Copyright (C) 2016  {fullname}
 
@@ -90,7 +90,10 @@ void checkInputFiles(struct optionsList *inOptions, struct IOFileDescriptors *de
 * Read header information from the fits files
 *
 *************************************************************/
-int getFitsHeader(struct optionsList *inOptions, struct fits_header_parameters *params, struct IOFileDescriptors *descriptors) {
+int getFitsHeader(struct optionsList *inOptions,
+    struct parameters *params,
+    struct fits_header_parameters *header,
+    struct IOFileDescriptors *descriptors) {
     int fitsStatus = SUCCESS;
     char fitsComment[FLEN_COMMENT];
 
@@ -118,29 +121,29 @@ int getFitsHeader(struct optionsList *inOptions, struct fits_header_parameters *
     fits_read_key(descriptors->uFile, TINT, "NAXIS3", &params->uAxisLen2,
       fitsComment, &fitsStatus);
     /* Get WCS information */
-    fits_read_key(descriptors->qFile, TFLOAT, "CRVAL1", &params->crval3,
+    fits_read_key(descriptors->qFile, TFLOAT, "CRVAL1", &header->crval3,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TFLOAT, "CRVAL2", &params->crval1,
+    fits_read_key(descriptors->qFile, TFLOAT, "CRVAL2", &header->crval1,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TFLOAT, "CRVAL3", &params->crval2,
+    fits_read_key(descriptors->qFile, TFLOAT, "CRVAL3", &header->crval2,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TFLOAT, "CRPIX1", &params->crpix3,
+    fits_read_key(descriptors->qFile, TFLOAT, "CRPIX1", &header->crpix3,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TFLOAT, "CRPIX2", &params->crpix1,
+    fits_read_key(descriptors->qFile, TFLOAT, "CRPIX2", &header->crpix1,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TFLOAT, "CRPIX3", &params->crpix2,
+    fits_read_key(descriptors->qFile, TFLOAT, "CRPIX3", &header->crpix2,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TFLOAT, "CDELT1", &params->cdelt3,
+    fits_read_key(descriptors->qFile, TFLOAT, "CDELT1", &header->cdelt3,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TFLOAT, "CDELT2", &params->cdelt1,
+    fits_read_key(descriptors->qFile, TFLOAT, "CDELT2", &header->cdelt1,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TFLOAT, "CDELT3", &params->cdelt2,
+    fits_read_key(descriptors->qFile, TFLOAT, "CDELT3", &header->cdelt2,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TSTRING, "CTYPE1", &params->ctype3,
+    fits_read_key(descriptors->qFile, TSTRING, "CTYPE1", &header->ctype3,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TSTRING, "CTYPE2", &params->ctype1,
+    fits_read_key(descriptors->qFile, TSTRING, "CTYPE2", &header->ctype1,
       fitsComment, &fitsStatus);
-    fits_read_key(descriptors->qFile, TSTRING, "CTYPE3", &params->ctype2,
+    fits_read_key(descriptors->qFile, TSTRING, "CTYPE3", &header->ctype2,
       fitsComment, &fitsStatus);
 
     return(fitsStatus);
@@ -400,12 +403,12 @@ int getFreqList(struct IOFileDescriptors *descriptors,
     int i;
     float tempFloat;
 
-    params->freqList = calloc(data_array->nFreqList, sizeof(data_array->freqList[0]));
-    if(params->freqList == NULL) {
+    data_array->freqList = calloc(data_array->nFreq, sizeof(data_array->freqList[0]));
+    if(data_array->freqList == NULL) {
         printf("Error: Mem alloc failed while reading in frequency list\n\n");
         return(FAILURE);
     }
-    for(i=0; i<params->nFreq; i++) {
+    for(i=0; i<data_array->nFreq; i++) {
         fscanf(descriptors->freq, "%f", &data_array->freqList[i]);
         if(feof(descriptors->freq)) {
             printf("Error: Frequency values and fits frames don't match\n");
@@ -419,16 +422,16 @@ int getFreqList(struct IOFileDescriptors *descriptors,
     }
 
     /* Compute \lambda^2 from the list of generated frequencies */
-    params->lambda2  = calloc(data_array->nFreq, sizeof(data_array->lambda2[0]));
-    if(params->lambda2 == NULL) {
+    data_array->lambda2  = calloc(data_array->nFreq, sizeof(data_array->lambda2[0]));
+    if(data_array->lambda2 == NULL) {
         printf("Error: Mem alloc failed while reading in frequency list\n\n");
         return(FAILURE);
     }
     // TODO refactor
     params->lambda20 = 0.0;
     for(i=0; i<data_array->nFreq; i++)
-        params->lambda2[i] = (LIGHTSPEED / data_array->freqList[i]) *
-                             (LIGHTSPEED / data_array->freqList[i]);
+        data_array->lambda2[i] = (LIGHTSPEED / data_array->freqList[i]) *
+                                 (LIGHTSPEED / data_array->freqList[i]);
 
     return(SUCCESS);
 }

@@ -29,7 +29,9 @@ extern "C"
 
 int generateRMSF(struct optionsList *inOptions, struct DataArrays *data_arrays, struct parameters *params);
 int compFunc(const void * a, const void * b);
-void getMedianLambda20(struct DataArrays *params);
+ void getMedianLambda20(struct parameters *params, struct DataArrays *data_arrays);
+
+
 int writeRMSF(struct optionsList inOptions, struct DataArrays params);
 int plotRMSF(struct optionsList inOptions);
 

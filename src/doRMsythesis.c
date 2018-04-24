@@ -1,3 +1,12 @@
+
+#include<cuda_runtime.h>
+#include<cuda.h>
+#include<time.h>
+#include "structures.h"
+#include "constants.h"
+#include "devices.h"
+#include "fileaccess.h"
+
 /*************************************************************
 * Allocates host memory
 *
@@ -126,7 +135,6 @@ int copyStepToDevice(int deviceId, float *qImageArray, float *d_qImageArray floa
 * GPU accelerated RM Synthesis function
 *
 *************************************************************/
-extern "C"
 int doRMSynthesis(struct optionsList *inOptions,
     struct IOFileDescriptors *descriptors,
     struct parameters *params,

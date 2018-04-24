@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Correspondence concerning RMSynth_GPU should be addressed to: 
+Correspondence concerning RMSynth_GPU should be addressed to:
 sarrvesh.ss@gmail.com
 
 ******************************************************************************/
@@ -28,15 +28,15 @@ extern "C"
 #endif
 
 struct deviceInfoList * getDeviceInformation(int *nDevices);
-int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
+int doRMSynthesis(struct optionsList *inOptions, struct parameters *params,
                   struct deviceInfoList selectedDeviceInfo,
                   struct timeInfoList *t);
 int getBestDevice(struct deviceInfoList *gpuList, int nDevices);
-struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,  
+struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
                                              int selectedDevice);
 void checkCudaError(void);
-void getGpuAllocForP(int *blockSize, int *threadSize, long *nFrames, 
-                     int nImRows, int nRowElements, 
+void getGpuAllocForP(int *blockSize, int *threadSize, long *nFrames,
+                     int nImRows, int nRowElements,
                      struct deviceInfoList selectedDeviceInfo);
 
 #endif
